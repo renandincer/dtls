@@ -289,6 +289,15 @@ func Server(conn net.PacketConn, rAddr net.Addr, config *Config) (*Conn, error) 
 	return ServerWithContext(ctx, conn, rAddr, config)
 }
 
+// ResumeServer resumes a DTLS server to with the state initialState.
+// The connection state is recovered in the way it doesn't make any handshake that it already did.
+func ResumeServer(conn net.PacketConn, rAddr net.Addr, config *Config, initialState *State) (*Conn, error) {
+	ctx, cancel := config.connectContextMaker()
+	defer cancel()
+
+	return ResumeServerWithContext(ctx, conn, rAddr, config, initialState)
+}
+
 // DialWithContext connects to the given network address and establishes a DTLS
 // connection on top.
 func DialWithContext(ctx context.Context, network string, rAddr *net.UDPAddr, config *Config) (*Conn, error) {
@@ -330,6 +339,20 @@ func ServerWithContext(ctx context.Context, conn net.PacketConn, rAddr net.Addr,
 		return nil, err
 	}
 	return handshakeConn(ctx, dconn, config, false, nil)
+}
+
+// ResumeServerWithContext resumes a DTLS server to with the state initialState.
+func ResumeServerWithContext(ctx context.Context, conn net.PacketConn, rAddr net.Addr, config *Config, initialState *State) (*Conn, error) {
+	if config == nil {
+		return nil, errNoConfigProvided
+	}
+
+	dconn, err := createConn(conn, rAddr, config, true)
+	if err != nil {
+		return nil, err
+	}
+
+	return handshakeConn(ctx, dconn, config, false, initialState)
 }
 
 // Read reads data from the connection.
